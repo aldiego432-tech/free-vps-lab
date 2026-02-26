@@ -1,4 +1,4 @@
-name: Free VPS SSH
+name: Free VPS Web (Cloudflare)
 
 on:
   workflow_dispatch:
@@ -6,32 +6,26 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Update system
         run: sudo apt update
 
-      - name: Install SSH
+      - name: Install cloudflared
         run: |
-          sudo apt install openssh-server -y
-          sudo service ssh start
+          wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
 
-      - name: Set root password
-        run: echo "root:123456" | sudo chpasswd
-
-      - name: Download ngrok
+      - name: Start simple web server
         run: |
-          wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.zip
-          unzip ngrok-v3-stable-linux-amd64.zip
-          sudo mv ngrok /usr/local/bin
+          echo "🔥 VPS activa en GitHub Actions 🔥" > index.html
+          python3 -m http.server 8080 &
 
-      - name: Authenticate ngrok
-        run: ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
-
-      - name: Start ngrok tunnel
+      - name: Start Cloudflare tunnel
         run: |
-          ngrok tcp 22 > ngrok.log &
+          cloudflared tunnel --url http://localhost:8080 > tunnel.log 2>&1 &
           sleep 10
-          cat ngrok.log
+          cat tunnel.log
 
       - name: Keep session alive
         run: sleep 3600
